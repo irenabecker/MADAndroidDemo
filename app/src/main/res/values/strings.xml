@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">MAD_Demo19</string>
+    <string name="welcome_message">Have a nice day, DROSO!</string>
+    <string name="helloMessage">Hello User</string>
+</resources>
