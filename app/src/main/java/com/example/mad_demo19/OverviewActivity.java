@@ -1,11 +1,20 @@
 package com.example.mad_demo19;
 
 import android.content.Intent;
-import android.support.annotation.NonNull;
+/*import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
+*/
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.room.Room;
+
+import com.example.mad_demo19.model.impl.room.ToDoDatabase;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.snackbar.Snackbar;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,7 +38,9 @@ public class OverviewActivity extends AppCompatActivity {
     private FloatingActionButton createButton;
     private ArrayAdapter<ToDo> listViewAdapter;
 
-    private List<ToDo> items = new ArrayList<>(Arrays.asList(new ToDo("lorem"), new ToDo("ipsum"), new ToDo("dolor")));
+    private ToDoDatabase db;
+
+    private List<ToDo> items = new ArrayList<>();//(Arrays.asList(new ToDo("lorem"), new ToDo("ipsum"), new ToDo("dolor")));
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,6 +91,23 @@ public class OverviewActivity extends AppCompatActivity {
                 Snackbar.make(findViewById(R.id.overviewLayout), "Selected: " + clickedItem.getName(), Snackbar.LENGTH_INDEFINITE).show();
             }
         });
+
+        db = Room.databaseBuilder(getApplicationContext(), ToDoDatabase.class, "todo-db").build();
+
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                List<ToDo> items = db.getDao().readAll();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        for (ToDo item : items){
+                            addNewItemToList(item);
+                        }
+                    }
+                });
+            }
+        }).start();
     }
 
     private void createNewItem(){
@@ -94,8 +122,26 @@ public class OverviewActivity extends AppCompatActivity {
         if(requestCode == 0 && resultCode == RESULT_OK){
             ToDo item = (ToDo)data.getSerializableExtra("item");
           //  Snackbar.make(findViewById(R.id.overviewLayout), "Received: " + itemName, Snackbar.LENGTH_LONG).show();
-            addNewItemToList(item);
+            createItemAndUpdateList(item);
         }
+    }
+
+    private void createItemAndUpdateList(ToDo item){
+        //neuer Hintergrundthread
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                long id = db.getDao().create(item);
+                item.setId(id);
+                //geht auf MainThread --> addNewItemToList muss im MainThread aufgerufen werden
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        addNewItemToList(item);
+                    }
+                });
+            }
+        }).start();
     }
 
     private void addNewItemToList(ToDo toDo){
